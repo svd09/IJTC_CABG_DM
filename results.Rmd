@@ -1,0 +1,272 @@
+---
+title: "results"
+author: "Salil V Deo"
+date: "November 30, 2019"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+# code for combining the data together
+# model rstpm2 code for flexible parametric model
+# compare conventional KM model and flexible parametic model
+
+library(tidyverse);library(tidylog);
+library(survival);library(GGally);
+library(survminer);library(MASS);
+library(rstpm2);library(magrittr);
+library(broom);library(GGally);library(haven)
+
+
+
+
+buxton = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\buxton_2012\\buxton_data.csv")
+
+hoffman = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\hoffman_2013\\hoffman_data.csv")
+
+lin = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\liin_2013\\lin_data.csv")
+
+raza = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\raza_2017\\raza_data.csv")
+
+tatoulis = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\tatoulis_2017\\tatoulis_data.csv")
+
+yamaguchi = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\yamaguchi_2017\\yamaguchi_data.csv")
+
+dorman = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\dorman_2012\\dorman_data.csv")
+
+
+pevni = read_csv(
+"D:\\CABG_metaanalysis\\graphs\\pevni_2017\\pevni_data.csv")
+
+iribarne = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\iribarne_2018\\iribarne_data.csv")
+
+schwann = read_csv(
+  "D:\\CABG_metaanalysis\\graphs\\schwann_2013\\schwann_data.csv")
+
+# create a seperate survivor object for each data
+
+buxton_surv = buxton %$% Surv(time, event)
+
+hoffman_surv = hoffman %$% Surv(time, event)
+
+lin_surv = lin %$% Surv(time, event)
+
+raza_surv = raza %$% Surv(time, event)
+
+tatoulis_surv = tatoulis %$% Surv(time, event)
+
+yamaguchi_surv = yamaguchi %$% Surv(time, event)
+
+pevni_surv = pevni %$% Surv(time, event)
+
+dorman_surv = dorman %$% Surv(time, event)
+
+iribarne_surv = iribarne %$% Surv(time, event)
+
+schwann_surv = schwann %$% Surv(time, event)
+
+# combine all data and then create a survivorship object
+
+df = rbind(buxton, hoffman, lin, raza, tatoulis, 
+           yamaguchi, dorman, pevni, iribarne, schwann)
+
+str(df)
+
+# write_csv(df, "D:\\CABG_metaanalysis\\graphs\\combineddata.csv")
+
+df_surv = df %$% Surv(time, event)
+
+df %>% count(study)
+
+# create a non-parametric kaplan meier model 
+# for the whole cohort
+
+km_df = survfit(df_surv ~ 1, data = df)
+
+km_df
+
+w = ggsurv(km_df,plot.cens = F, CI = T)
+
+km_arm = survfit(df_surv ~ arm, data = df)
+
+ggsurv(km_arm, plot.cens = F)
+
+
+# Compare BITA and LITA cohorts 
+
+df2 = rbind(buxton, raza, tatoulis, 
+      yamaguchi, dorman, pevni, iribarne)
+
+# write_dta(df2, "D:\\CABG_metaanalysis\\graphs\\bita_lita_cohort.dta")
+
+# create survivor object
+
+df2_surv = survfit(Surv(time, event) ~ arm, data = df2)
+
+df2_surv
+
+survdiff(Surv(time, event) ~ arm, data = df2)
+
+# create a parametric survival object and then compare
+# curve for parametic survival object and km curve
+
+flex_surv1 = stpm2(Surv(time, event)~ arm, 
+      data = df2,df = 4, frailty = T,cluster = study)
+
+summary(flex_surv1)
+
+eform(flex_surv1)[2,]
+
+
+
+# LITA/vein vs LITA/RA:
+
+
+df_ra = rbind(hoffman, lin, 
+           schwann)
+
+
+km_ra = survfit(Surv(time, event) ~ arm, data = df_ra)
+
+
+flex_ra = stpm2(Surv(time, event)~ arm, 
+                  data = df_ra,df = 4, frailty = T,cluster = study)
+
+summary(flex_ra)
+
+eform(flex_ra)[2,]
+
+
+
+
+```
+
+
+```{r compare all three with KM curves}
+
+buxton2 = buxton %>% mutate(arm2 = fct_recode(factor(arm),
+                                              "TAR" = "1",
+                                              "nonTAR" = "2"))
+
+
+hoffman2 = hoffman %>% mutate(arm2 = fct_recode(factor(arm),
+                                                "LITA/RA" = "1",
+                                                "LITA/SVG" = "2"))
+
+lin2 = lin %>% mutate(arm2 = fct_recode(factor(arm),
+                                        "LITA/RA" = "1",
+                                        "LITA/SVG" = "2"))
+
+tatoulis2 = tatoulis %>% mutate(arm2 = fct_recode(factor(arm),
+                                                  "TAR" = "1",
+                                                  "nonTAR" = "2"))
+
+raza2 = raza %>% mutate(arm2 = fct_recode(factor(arm),
+                                          "BITA" = "1",
+                                          "LITA" = "2"))
+
+iribarne2 = iribarne %>% mutate(arm2 = fct_recode(factor(arm),
+                                                  "BITA" = "1",
+                                                  "LITA" = "2"))
+
+pevni2 = pevni %>% mutate(arm2 = fct_recode(factor(arm),
+                                            "BITA" = "1",
+                                            "LITA" = "2"))
+
+dorman2 = dorman %>% mutate(arm2 = fct_recode(factor(arm),
+                                              "BITA" = "1",
+                                              "LITA" = "2"))
+
+yamaguchi2 = yamaguchi %>% mutate(arm2 = fct_recode(factor(arm),
+                                                    "TAR" = "1",
+                                                    "nonTAR" = "2"))
+
+schwann2 = schwann %>% mutate(arm2 = fct_recode(factor(arm),
+                                                "LITA/RA" = "1",
+                                                "LITA/SVG" = "2"))
+
+df2 = rbind(tatoulis2, buxton2, dorman2, yamaguchi2, lin2, schwann2, pevni2,
+            iribarne2, raza2)
+
+df2 %>% count(arm2)
+
+```
+
+
+
+```{r}
+
+# plot all patients according to strategy of conduit use
+
+km_all = survfit(Surv(time, event) ~ arm2, data = df2)
+
+allmodel = surv_summary(km_all)
+
+# now to proceed with various comparisons from cohorts.
+
+km_tar = survfit(Surv(time, event) ~arm2, data = df2, subset = arm2 %in% c("TAR", "nonTAR"))
+
+library(survminer)
+
+survminer::ggsurvplot(km_tar,cumcensor = F)
+
+km_tar_table = surv_summary(km_tar)
+
+write_csv(km_tar_table, "D:\\CABG_metaanalysis\\graphs\\results\\km_tar_table.csv")
+
+df_tar = df2 %>% filter(arm2 %in% c("TAR","nonTAR"))
+
+flex_tar = stpm2(Surv(time, event)~ arm2, 
+                  data = df_tar,df = 4, frailty = T,cluster = study)
+
+summary(flex_tar)
+
+eform(flex_tar)[2,]
+
+flex_tars = stpm2(Surv(time, event) ~ arm2, 
+                  data = df_tar, df = 4)
+
+
+
+
+predtar = predict(flex_tars, data = new.data(arm2 = "TAR":"nonTAR"),
+                  type = "hazard", se.fit = T, full = T, grid = T )
+
+
+
+predtar$Estimatep = predtar$Estimate*100
+predtar$lowerp = predtar$lower*100
+predtar$upperp = predtar$upper*100
+
+library(ggthemes)
+
+
+tar_hazard = ggplot(predtar,
+       aes(x= time, y=Estimatep, ymin=lowerp, ymax=upperp, fill = arm2)) + scale_color_manual(values = c("blue","maroon")) + 
+  xlab("Time (Years)") +
+  ylab("Hazard")+
+  geom_line() +
+  geom_ribbon(alpha = 0.5) + guides(fill=guide_legend(title="Strategy")) + 
+  geom_line() 
+
+tar_h = tar_hazard + ggthemes::theme_clean() + 
+  ylab("Instantaneous Hazard (Percentage)") +
+  xlab("Time of folow-up (Years)") 
+
+tar_h
+
+
+
+```
+
